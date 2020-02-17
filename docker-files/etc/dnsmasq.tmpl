@@ -1,5 +1,6 @@
 {{ define "host" }}
     {{ $host := .Host }}
+
     {{ $tld := .Tld }}
     {{ if eq $tld "" }}
         {{ range $index, $network := .Container.Networks }}
@@ -19,6 +20,13 @@ address=/{{ $host }}.{{ $network.Name }}.{{ $tld }}/{{ $network.IP }}
 
 {{ $tld := or ($.Env.DOMAIN_TLD) "docker" }}
 {{ range $index, $container := $ }}
+    {{ $service := (index $container.Labels "com.docker.swarm.service.name" )}}
+    {{ if ne $service "" }}
+        {{ $suffix := (trimPrefix (print $service ".") $container.Name) }}
+        {{ $id := index (splitN $suffix "." 2) 0 }}
+        {{ template "host" (dict "Container" $container "Host" (print $service "." $id) "Tld" $tld) }}
+    {{ end }}
+
     {{ $hosts := coalesce $container.Name (print "*." $container.Name) }}
     {{ $host_part := split $container.Name "_" }}
     {{ $host_part_len := len $host_part }}
