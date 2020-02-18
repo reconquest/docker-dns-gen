@@ -1,0 +1,42 @@
+{{ $tld := or ($.Env.DOMAIN_TLD) "docker" }}
+@	IN	SOA	ns.{{$tld}} {{ $tld }}. (
+	1
+	3600
+	1800
+	604800
+	0
+)
+
+@	IN	NS	{{ $tld }}.
+@	IN	A	127.0.0.1
+
+{{ define "host" }}
+    {{ $host := .Host }}
+
+    {{ $tld := .Tld }}
+    {{ if eq $tld "" }}
+        {{ range $index, $network := .Container.Networks }}
+            {{ if ne $network.IP "" }}
+{{ $host }}	IN	A	{{ $network.IP }}
+            {{ end }}
+        {{ end }}
+    {{ else }}
+        {{ range $index, $network := .Container.Networks }}
+            {{ if ne $network.IP "" }}
+{{ $host }}	IN	A	{{ $network.IP }}
+{{ $host }}.{{ $network.Name }}	IN	A	{{ $network.IP }}
+            {{ end }}
+        {{ end }}
+    {{ end }}
+{{ end }}
+
+{{ range $index, $container := $ }}
+    {{ $service := (index $container.Labels "com.docker.swarm.service.name" )}}
+    {{ if ne $service "" }}
+        {{ $suffix := (trimPrefix (print $service ".") $container.Name) }}
+        {{ $id := index (splitN $suffix "." 2) 0 }}
+        {{ template "host" (dict "Container" $container "Host" (print $service "." $id) "Tld" $tld) }}
+    {{ end }}
+    {{ template "host" (dict "Container" $container "Host" $container.Name "Tld" $tld) }}
+{{ end }}
+; vim:ft=template

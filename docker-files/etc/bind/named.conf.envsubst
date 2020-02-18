@@ -1,0 +1,14 @@
+options {
+  port 5353;
+  allow-transfer {"none";};
+  allow-recursion {"none";};
+  recursion no;
+  directory "/var/bind";
+  pid-file "/var/run/named/named.pid";
+  listen-on { $GATEWAY; };
+};
+
+zone "docker" IN {
+  type master;
+  file "docker.zone";
+};
